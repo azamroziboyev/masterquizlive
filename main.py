@@ -1798,12 +1798,6 @@ async def process_broadcast_confirmation(callback_query: types.CallbackQuery, st
         await callback_query.message.answer(get_text(lang, "error_general"))
         await state.clear()
 
-# Create a Flask app instance for Gunicorn to use
-from telegram_webapp.app import app as flask_app
-
-# This function will be called by Gunicorn
-app = flask_app
-
 async def main():
     # Initialize database
     init_db()
@@ -1815,23 +1809,6 @@ async def main():
             loop.add_signal_handler(sig, lambda: asyncio.create_task(shutdown()))
     
     logger.info("Starting MasterQuiz bot...")
-    
-    # Check if we're running in Heroku (where PORT is set)
-    if 'PORT' in os.environ:
-        # In production, Gunicorn will handle the web server
-        logger.info("Running in production mode with Gunicorn")
-    else:
-        # In development, start Flask in a separate thread
-        import threading
-        
-        # Start Flask app in a separate thread
-        def run_flask():
-            port = int(os.environ.get("PORT", 8080))
-            flask_app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
-        
-        # Start Flask in a thread
-        threading.Thread(target=run_flask, daemon=True).start()
-        logger.info(f"Flask web server started on port {os.environ.get('PORT', 8080)}")
     
     try:
         # Delete webhook before starting polling
@@ -1881,28 +1858,7 @@ async def shutdown():
     logger.info("Shutdown complete")
     os._exit(0)
 
-# Web App command handler
-@dp.message(lambda message: message.text == "📱 Web Quiz App")
-async def web_app_command(message: types.Message):
-    user_id = message.from_user.id
-    lang = await get_user_language(user_id)
-    
-    # Get the appropriate button text based on language
-    # Get language preference
-    lang = await get_user_language(user_id)
-    
-    # Prepare appropriate message based on language
-    if lang == "uz":
-        message_text = "Bu funksiya tez orada botga qo'shiladi"
-    elif lang == "ru":
-        message_text = "Эта функция скоро будет добавлена в бот"
-    else:  # Default to English
-        message_text = "This feature will be added to the bot soon"
-    
-    await message.answer(
-        message_text,
-        reply_markup=types.ReplyKeyboardRemove()
-    )
+
 
 if __name__ == "__main__":
     asyncio.run(main())
