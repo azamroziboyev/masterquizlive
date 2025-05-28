@@ -1,0 +1,14 @@
+services:
+  # Web service for the Telegram bot and web app
+  - type: web
+    name: masterquiz
+    env: python
+    buildCommand: pip install -r requirements.txt && pip install -r telegram_webapp/requirements.txt
+    startCommand: gunicorn app:app
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: PORT
+        value: 8080
+    healthCheckPath: /
