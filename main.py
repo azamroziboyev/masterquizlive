@@ -1798,6 +1798,12 @@ async def process_broadcast_confirmation(callback_query: types.CallbackQuery, st
         await callback_query.message.answer(get_text(lang, "error_general"))
         await state.clear()
 
+# Create a Flask app instance for Gunicorn to use
+from telegram_webapp.app import app as flask_app
+
+# This function will be called by Gunicorn
+app = flask_app
+
 async def main():
     # Initialize database
     init_db()
@@ -1810,18 +1816,22 @@ async def main():
     
     logger.info("Starting MasterQuiz bot...")
     
-    # Import Flask app here to avoid circular imports
-    from telegram_webapp.app import app as flask_app
-    import threading
-    
-    # Start Flask app in a separate thread
-    def run_flask():
-        port = int(os.environ.get("PORT", 8080))
-        flask_app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
-    
-    # Start Flask in a thread
-    threading.Thread(target=run_flask, daemon=True).start()
-    logger.info(f"Flask web server started on port {os.environ.get('PORT', 8080)}")
+    # Check if we're running in Heroku (where PORT is set)
+    if 'PORT' in os.environ:
+        # In production, Gunicorn will handle the web server
+        logger.info("Running in production mode with Gunicorn")
+    else:
+        # In development, start Flask in a separate thread
+        import threading
+        
+        # Start Flask app in a separate thread
+        def run_flask():
+            port = int(os.environ.get("PORT", 8080))
+            flask_app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
+        
+        # Start Flask in a thread
+        threading.Thread(target=run_flask, daemon=True).start()
+        logger.info(f"Flask web server started on port {os.environ.get('PORT', 8080)}")
     
     try:
         # Delete webhook before starting polling
